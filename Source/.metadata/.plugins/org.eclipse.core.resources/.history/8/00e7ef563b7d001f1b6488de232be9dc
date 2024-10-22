@@ -1,0 +1,19 @@
+/*
+ * soft_timer.h
+ *
+ *  Created on: Sep 21, 2024
+ *      Author: Admin
+ */
+
+#ifndef INC_SOFT_TIMER_H_
+#define INC_SOFT_TIMER_H_
+
+#include <stdio.h>
+#include <stdlib.h>
+
+extern int timer_flag[10];
+
+void setTimer(int pos, int value);
+void runTimer(void);
+
+#endif /* INC_SOFT_TIMER_H_ */
