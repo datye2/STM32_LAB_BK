@@ -6,21 +6,22 @@
  */
 
 #include "main.h"
+#include "input_reading.h"
 #define NO_OF_BUTTONS	3
 
-uint16_t Button_pin[3] = {GPIO_PIN_8, GPIO_PIN_9, GPIO_PIN_10};
+uint16_t Button_pin[3] = {GPIO_PIN_9, GPIO_PIN_10, GPIO_PIN_11};
 #define DURATION_FOR_AUTO_INCREASING 100
 #define BUTTON_IS_PRESSED			GPIO_PIN_RESET
 #define BUTTON_IS_RELEASED			GPIO_PIN_SET
 
-static GPIO_PinState buttonBuffer[NO_OF_BUTTONS];
+ GPIO_PinState buttonBuffer[NO_OF_BUTTONS];
 
-static GPIO_PinState debounceButtonBuffer1[NO_OF_BUTTONS];
-static GPIO_PinState debounceButtonBuffer2[NO_OF_BUTTONS];
+ GPIO_PinState debounceButtonBuffer1[NO_OF_BUTTONS];
+ GPIO_PinState debounceButtonBuffer2[NO_OF_BUTTONS];
 
-static uint8_t	flagForButtonPress1s[NO_OF_BUTTONS];
+ uint8_t	flagForButtonPress1s[NO_OF_BUTTONS];
 
-static uint16_t	counterForButtonPress1s[NO_OF_BUTTONS];
+ uint16_t	counterForButtonPress1s[NO_OF_BUTTONS];
 
 void button_reading(void)
 {
@@ -39,7 +40,6 @@ void button_reading(void)
 				}
 				else
 				{
-					counterForButtonPress1s[i] = 0;
 					flagForButtonPress1s[i] = 1;
 				}
 			}

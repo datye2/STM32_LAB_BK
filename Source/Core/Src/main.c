@@ -25,12 +25,23 @@
 #include "input_reading.h"
 #include "input_processing.h"
 #include "LAB3.h"
+#include "7SEG.h"
 #include "stdbool.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+#define Timer2_fre			100		//hz
+#define Normal_mode_fre		1	//hz
+#define display_fre			5	//hz
+#define led_blink_fre		2	//hz
+#define	display_counter_max Timer2_fre/display_fre
+#define	Nor_mode_counter_max Timer2_fre/Normal_mode_fre
+#define	led_blink_counter_max Timer2_fre/led_blink_fre
+bool f_normal = false; uint8_t normal_counter = Nor_mode_counter_max;
+bool f_working = false;
+bool f_display = false; uint8_t display_counter = display_counter_max;
+bool f_led_blink = false; uint8_t led_blink_counter = led_blink_counter_max;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -46,10 +57,9 @@
 TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN PV */
-#define Timer2_fre	100		//hz
-#define Normal_mode_fre	1	//hz
-#define	Nor_mode_counter_max Timer2_fre/Normal_mode_fre
-
+uint8_t mode = 0, time_led_1 = 0, time_led_2 = 0, counter_led;
+uint8_t temp_time = 0, temp_mode = 0;
+bool f_run = false;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -62,7 +72,7 @@ static void MX_TIM2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-bool f_normal = false; uint8_t normal_counter = Nor_mode_counter_max;
+
 /* USER CODE END 0 */
 
 /**
@@ -95,7 +105,8 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_TIM_Base_Start_IT(&htim2);
+  init_lab3();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -105,11 +116,97 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  if(f_normal)
+	  if(f_working)
 	  {
-		  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_1);
-		  f_normal = false;
-		  Normal_mode();
+		  f_working = false; //mode, temp_time
+	  }
+	  if(f_display)
+	  {
+		  f_display = false;
+		  if(is_button_pressed(0))
+		  {
+			  f_run = false;
+			  clear_all_led();
+			  temp_mode++;
+			  if(temp_mode >= 5) temp_mode = 0;
+			  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_RESET); // turn on second led
+			  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_13, GPIO_PIN_SET);
+			  Display7SEG(temp_mode,8);
+			  mode = temp_mode;
+		  }
+		  if(is_button_pressed_1s(1))
+		  {
+			  f_run = false;
+			  time_led_2++;
+			  if (time_led_2 >= 10)
+			  {
+			      time_led_2 = 0;
+			      time_led_1++;
+			  }
+		  }
+		  counter_led++;
+		  switch(counter_led)
+		  {
+				  case 1:
+					  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET); // turn on second led
+					  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_14, GPIO_PIN_SET);
+					  Display7SEG(time_led_2,1);
+					  break;
+				  case 2:
+					  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET); // turn off second led
+					  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_14, GPIO_PIN_RESET);
+					  Display7SEG(time_led_1,1);
+					  counter_led = 0;
+					  break;
+				  default :counter_led = 0; break;
+		  }
+		  if(is_button_pressed(2))
+		  {
+			  temp_time = time_led_1*10 + time_led_2;
+			  f_run = true;
+		  }
+	  }
+	  if(f_led_blink && !f_run)
+	  {
+		  f_led_blink = false;
+		  switch (mode)
+		  {
+		  	  case 1 :
+		  		blink_led_red();
+		  		blink_led_yellow();
+		  		blink_led_green();
+		  		break;
+		  	  case 2 :
+		  		blink_led_red();
+		  		break;
+		  	  case 3 :
+		  		blink_led_yellow();
+		  		break;
+		  	  case 4 :
+		  		blink_led_green();
+		  		break;
+		  }
+	  }
+
+	  if(f_run && f_normal)
+	  {
+			  f_normal = false;
+			  switch (mode)
+			  {
+				  case 1 :
+					Normal_mode(5,3,2);
+					break;
+				  case 2 :
+					Mod_Led_Red(temp_time);
+					break;
+				  case 3 :
+					Mod_Led_Yellow(temp_time);
+					break;
+				  case 4 :
+					Mod_Led_Green(temp_time);
+					break;
+			  }
+
 	  }
   }
   /* USER CODE END 3 */
@@ -169,7 +266,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 0;
+  htim2.Init.Prescaler = 7;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 9999;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -211,18 +308,21 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4
-                          |GPIO_PIN_5|GPIO_PIN_6, GPIO_PIN_SET);
+                          |GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
+                          |GPIO_PIN_15, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_10
                           |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_3
                           |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7
-                          |GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_SET);
+                          |GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PA1 PA2 PA3 PA4
-                           PA5 PA6 */
+                           PA5 PA6 PA12 PA14
+                           PA15 */
   GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4
-                          |GPIO_PIN_5|GPIO_PIN_6;
+                          |GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
+                          |GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -241,16 +341,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA8 PA9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9;
+  /*Configure GPIO pins : PA8 PA9 PA10 PA11 */
+  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PA10 */
-  GPIO_InitStruct.Pin = GPIO_PIN_10;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 }
@@ -258,17 +352,28 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	if(htim->Instance == TIM2)
-	{
-		button_reading();
-		if(!normal_counter--)
-		{
-			f_normal = true;
-			normal_counter = Nor_mode_counter_max;
-		}
-		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_13);
-	}
+    if(htim->Instance == TIM2)
+    {
+        f_working = true;
+        button_reading(); // Kiểm tra nếu nút có được đ�?c đúng
+        if(!led_blink_counter--)
+        {
+        	f_led_blink = true;
+        	led_blink_counter = led_blink_counter_max;
+        }
+        if(!display_counter--)
+        {
+        	f_display = true;
+        	display_counter = display_counter_max;
+        }
+        if(!normal_counter--)
+        {
+            f_normal = true;
+            normal_counter = Nor_mode_counter_max;
+        }
+    }
 }
+
 /* USER CODE END 4 */
 
 /**

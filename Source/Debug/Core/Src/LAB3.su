@@ -1,3 +1,10 @@
-LAB3.c:16:6:Normal_mode	8	static
-LAB3.c:101:6:Mod_Led_Yellow	4	static
-LAB3.c:106:6:Mod_Led_Green	4	static
+LAB3.c:16:6:Normal_mode	16	static
+LAB3.c:101:6:blink_led_2hz	16	static
+LAB3.c:123:6:blink_led_red	8	static
+LAB3.c:127:6:blink_led_green	8	static
+LAB3.c:131:6:blink_led_yellow	8	static
+LAB3.c:136:6:clear_all_led	8	static
+LAB3.c:145:6:Mod_Led_Red	16	static
+LAB3.c:150:6:Mod_Led_Yellow	16	static
+LAB3.c:156:6:Mod_Led_Green	16	static
+LAB3.c:162:6:init_lab3	4	static
